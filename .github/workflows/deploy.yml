@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   deploy:
@@ -26,5 +23,5 @@ jobs:
           ssh -o StrictHostKeyChecking=no deploy@77.246.247.68 << 'EOF'
             cd /var/www/epn
             git pull origin main
-            sudo systemctl reload nginx  # или apache2, если вы используете Apache
+            sudo systemctl reload nginx
           EOF
