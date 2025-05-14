@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Deploy Go App to VDS
 
 on:
   push:
@@ -10,19 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_PRIVATE_KEY }}
+    - name: Build Go binary
+      run: |
+        go version
+        go build -o myapp
 
-      - name: Deploy via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /opt/react2 || exit 1
-            git pull origin main || exit 1
-            docker-compose down
-            docker-compose up --build -d
-          EOF
+    - name: Upload binary to VDS
+      uses: appleboy/scp-action@v0.1.3
+      with:
+        host: ${{ secrets.VDS_IP }}
+        username: ${{ secrets.VDS_USER }}
+        key: ${{ secrets.VDS_SSH_KEY }}
+        source: "./myapp"
+        target: "/home/${{ secrets.VDS_USER }}/myapp"
+
+    - name: Restart systemd service
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.VDS_IP }}
+        username: ${{ secrets.VDS_USER }}
+        key: ${{ secrets.VDS_SSH_KEY }}
+        script: |
+          sudo systemctl restart myapp
