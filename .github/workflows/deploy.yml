@@ -1,37 +1,46 @@
-name: Deploy Go App to VDS
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Установить Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Установить зависимости
+        run: |
+          npm install
+
+      - name: Запустить тесты (если есть)
+        run: |
+          npm test
+
   deploy:
     runs-on: ubuntu-latest
-
+    needs: test
+    if: success()
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Build Go binary
-      run: |
-        go version
-        go build -o myapp
+      - name: Установить SSH ключ
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.VDS_SSH_KEY }}  # Секретный SSH ключ для доступа
 
-    - name: Upload binary to VDS
-      uses: appleboy/scp-action@v0.1.3
-      with:
-        host: ${{ secrets.VDS_IP }}
-        username: ${{ secrets.VDS_USER }}
-        key: ${{ secrets.VDS_SSH_KEY }}
-        source: "./myapp"
-        target: "/home/${{ secrets.VDS_USER }}/myapp"
-
-    - name: Restart systemd service
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.VDS_IP }}
-        username: ${{ secrets.VDS_USER }}
-        key: ${{ secrets.VDS_SSH_KEY }}
-        script: |
-          sudo systemctl restart myapp
+      - name: Развертывание на сервер
+        run: |
+          ssh -o StrictHostKeyChecking=no deploy@77.246.247 "cd /var/www/epn && git pull origin main && sudo systemctl restart nginx"  # Перезапуск Nginx на сервере
