@@ -23,7 +23,7 @@ jobs:
 
       - name: Деплой на сервер
         run: |
-          ssh -o StrictHostKeyChecking=no deploy@77.246.247 << 'EOF'
+          ssh -o StrictHostKeyChecking=no deploy@77.246.247.68 << 'EOF'
             cd /var/www/epn
             git pull origin main
             sudo systemctl reload nginx  # или apache2, если вы используете Apache
